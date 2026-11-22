@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "448024245195",
+    "project_id": "head-band-hero",
+    "storage_bucket": "head-band-hero.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:448024245195:android:7c5ff6b928d1fa5cedfc4e",
+        "android_client_info": {
+          "package_name": "com.proto.headbandhero"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNsFY6rYcujCJy-ynpH5VxNEUc9Hym0G4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

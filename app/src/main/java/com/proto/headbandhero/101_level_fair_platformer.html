@@ -1,0 +1,2174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>101-Level Fair Platformer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #1e1e24;
+      color: #f4f1de;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .game-shell {
+      position: relative;
+      width: 100vw;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #1e1e24;
+    }
+
+    .hud {
+      position: absolute;
+      top: 8px;
+      left: 10px;
+      right: 10px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      flex-wrap: nowrap;
+      background: rgba(30, 30, 36, 0.34);
+      backdrop-filter: blur(4px);
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(243, 229, 171, 0.22);
+      overflow-x: auto;
+    }
+
+    .hud-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: nowrap;
+      min-width: 0;
+    }
+
+    .hud-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: #f3e5ab;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 150px;
+    }
+
+    .hud-stat {
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: rgba(30, 30, 36, 0.45);
+      color: #e07a5f;
+      padding: 2px 7px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .hud-level {
+      color: #2a9d8f;
+    }
+
+    .hud-coins {
+      color: #e9c46a;
+    }
+
+    .hud-power {
+      color: #4ecdc4;
+    }
+
+    .hud-power.used {
+      color: #7d8194;
+    }
+
+    .hud-timer {
+      color: #f3e5ab;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hud-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 7px;
+      padding: 5px 9px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: transform 0.1s ease, background-color 0.15s ease;
+    }
+
+    button:active {
+      transform: scale(0.96);
+    }
+
+    .btn-secondary {
+      background: rgba(43, 45, 66, 0.55);
+      color: #f4f1de;
+      border: 1px solid rgba(243, 229, 171, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: #4d5173;
+    }
+
+    .btn-primary {
+      background: #e07a5f;
+      color: #1e1e24;
+      font-size: 0.95rem;
+      padding: 10px 20px;
+    }
+
+    .btn-primary:hover {
+      background: #ea8c73;
+    }
+
+    .stage-area {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      height: 100%;
+      background: #f3e5ab;
+      overflow: hidden;
+      position: relative;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(30, 30, 36, 0.56);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      text-align: center;
+      padding: 20px;
+      z-index: 15;
+    }
+
+    .overlay.visible {
+      display: flex;
+    }
+
+    .overlay h2 {
+      font-size: 1.75rem;
+      color: #f3e5ab;
+    }
+
+    .overlay p {
+      font-size: 0.95rem;
+      color: #f4f1de;
+    }
+
+    .overlay-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .level-select-card {
+      width: 100%;
+      max-width: 680px;
+      max-height: 85%;
+      background: #2b2d42;
+      border: 2px solid rgba(243, 229, 171, 0.3);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .level-select-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .level-select-header h2 {
+      font-size: 1.2rem;
+    }
+
+    .level-select-meta {
+      font-size: 0.82rem;
+      color: #c9c5b1;
+    }
+
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+      gap: 8px;
+      overflow-y: auto;
+      padding: 4px;
+      max-height: 240px;
+    }
+
+    .level-tile {
+      height: 44px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      background: #3d405b;
+      color: #f4f1de;
+      border: 2px solid transparent;
+      padding: 0;
+    }
+
+    .level-tile.cleared {
+      background: #2a9d8f;
+      color: #1e1e24;
+    }
+
+    .level-tile.current {
+      border-color: #f3e5ab;
+      background: #e07a5f;
+      color: #1e1e24;
+    }
+
+    .level-tile.locked {
+      background: #1e1e24;
+      color: #6c6f82;
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
+    .level-tile-sub {
+      font-size: 0.62rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .touch-left-group {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      z-index: 12;
+      display: flex;
+      gap: 10px;
+    }
+
+    .touch-right-group {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      z-index: 12;
+      display: flex;
+    }
+
+    .touch-btn {
+      background: rgba(30, 30, 36, 0.32);
+      color: #f4f1de;
+      min-width: 60px;
+      height: 52px;
+      font-size: 1.15rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid rgba(243, 229, 171, 0.42);
+      border-radius: 14px;
+      backdrop-filter: blur(3px);
+      touch-action: manipulation;
+    }
+
+    .touch-jump {
+      min-width: 84px;
+      font-size: 1rem;
+      font-weight: 700;
+      background: rgba(224, 122, 95, 0.45);
+      color: #ffffff;
+      border-color: rgba(243, 229, 171, 0.55);
+    }
+
+    .touch-btn.pressed,
+    .touch-btn:active {
+      background: #e07a5f;
+      color: #1e1e24;
+    }
+
+    .touch-jump.pressed,
+    .touch-jump:active {
+      background: #f3e5ab;
+      color: #1e1e24;
+    }
+
+    .hint-pill {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9;
+      background: rgba(30, 30, 36, 0.72);
+      color: #c9c5b1;
+      font-size: 0.75rem;
+      padding: 4px 12px;
+      border-radius: 999px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .rotate-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: #1e1e24;
+      color: #f3e5ab;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      gap: 12px;
+    }
+
+    .rotate-overlay.visible {
+      display: flex;
+    }
+
+    .rotate-icon {
+      font-size: 2.5rem;
+    }
+
+    .rotate-overlay p {
+      color: #c9c5b1;
+      max-width: 280px;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    @media (pointer: coarse), (max-width: 820px), (max-height: 520px) {
+      .hint-pill {
+        display: none;
+      }
+      .hud-title {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-shell">
+    <div class="hud">
+      <div class="hud-left">
+        <div id="levelTitle" class="hud-title">Level 1: Easy Warm-Up</div>
+        <div id="levelCounter" class="hud-stat hud-level">Level 1 / 101</div>
+        <div id="powerStatus" class="hud-stat hud-power">Double Jump: Ready</div>
+        <div id="coinCounter" class="hud-stat hud-coins">Coins: 0 / 3</div>
+        <div id="deathCounter" class="hud-stat">Deaths: 0</div>
+        <div id="timerDisplay" class="hud-stat hud-timer">Time: 0.0s</div>
+      </div>
+      <div class="hud-actions">
+        <button id="levelsBtn" class="btn-secondary" type="button">Levels</button>
+        <button id="fullscreenBtn" class="btn-secondary" type="button">Fullscreen</button>
+        <button id="muteBtn" class="btn-secondary" type="button">Sound: On</button>
+        <button id="resetBtn" class="btn-secondary" type="button">Reset (R)</button>
+      </div>
+    </div>
+
+    <div class="stage-area">
+      <div id="canvasWrap" class="canvas-wrap">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="winOverlay" class="overlay">
+          <h2 id="winHeading">Level Complete!</h2>
+          <p id="winSummary">You made it to the door.</p>
+          <div class="overlay-actions">
+            <button id="nextLevelBtn" class="btn-primary" type="button">Next Level</button>
+            <button id="playAgainBtn" class="btn-primary" type="button" style="display: none;">Play Again</button>
+            <button id="winLevelsBtn" class="btn-secondary" type="button">Levels</button>
+          </div>
+        </div>
+
+        <div id="failOverlay" class="overlay">
+          <h2>You Dashed!</h2>
+          <p id="failSummary">Watch out for the obstacles.</p>
+          <div class="overlay-actions">
+            <button id="retryLevelBtn" class="btn-primary" type="button">Restart Level</button>
+            <button id="failLevelsBtn" class="btn-secondary" type="button">Levels</button>
+          </div>
+        </div>
+
+        <div id="levelSelectOverlay" class="overlay">
+          <div class="level-select-card">
+            <div class="level-select-header">
+              <div>
+                <h2>Select Level (1–101)</h2>
+                <div id="progressSummary" class="level-select-meta">Unlocked: 1 / 101 &nbsp;|&nbsp; Cleared: 0</div>
+              </div>
+              <div class="hud-actions">
+                <button id="clearSaveBtn" class="btn-secondary" type="button">Reset Save</button>
+                <button id="closeLevelsBtn" class="btn-primary" type="button" style="padding: 7px 14px; font-size: 0.85rem;">Close</button>
+              </div>
+            </div>
+            <div id="levelGrid" class="level-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="touch-left-group">
+      <button id="leftBtn" class="touch-btn" type="button" aria-label="Move Left">&#9664;</button>
+      <button id="rightBtn" class="touch-btn" type="button" aria-label="Move Right">&#9654;</button>
+    </div>
+
+    <div class="hint-pill">Move: A / D or Arrows &nbsp;|&nbsp; Jump / 1x Double Jump: Space, W, or Up</div>
+
+    <div class="touch-right-group">
+      <button id="jumpBtn" class="touch-btn touch-jump" type="button" aria-label="Jump">Jump</button>
+    </div>
+  </div>
+
+  <div id="rotateOverlay" class="rotate-overlay">
+    <div class="rotate-icon">&#128241;&#8635;</div>
+    <h2>Landscape Mode Only</h2>
+    <p>Please rotate your screen or widen your window to play in landscape mode.</p>
+  </div>
+
+  <script>
+    (function () {
+      const LOGICAL_WIDTH = 800;
+      const LOGICAL_HEIGHT = 450;
+      const FLOOR_Y = 380;
+      const TOTAL_LEVELS = 101;
+      const SAVE_KEY = 'fair_platformer_progress_v1';
+
+      const canvas = document.getElementById('gameCanvas');
+      const canvasWrap = document.getElementById('canvasWrap');
+      const ctx = canvas.getContext('2d');
+      const levelTitleEl = document.getElementById('levelTitle');
+      const levelCounterEl = document.getElementById('levelCounter');
+      const powerStatusEl = document.getElementById('powerStatus');
+      const coinCounterEl = document.getElementById('coinCounter');
+      const deathCounterEl = document.getElementById('deathCounter');
+      const timerDisplayEl = document.getElementById('timerDisplay');
+      const levelsBtn = document.getElementById('levelsBtn');
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
+      const muteBtn = document.getElementById('muteBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const winOverlay = document.getElementById('winOverlay');
+      const winHeading = document.getElementById('winHeading');
+      const winSummary = document.getElementById('winSummary');
+      const nextLevelBtn = document.getElementById('nextLevelBtn');
+      const playAgainBtn = document.getElementById('playAgainBtn');
+      const winLevelsBtn = document.getElementById('winLevelsBtn');
+      const failOverlay = document.getElementById('failOverlay');
+      const failSummary = document.getElementById('failSummary');
+      const retryLevelBtn = document.getElementById('retryLevelBtn');
+      const failLevelsBtn = document.getElementById('failLevelsBtn');
+      const levelSelectOverlay = document.getElementById('levelSelectOverlay');
+      const levelGrid = document.getElementById('levelGrid');
+      const progressSummary = document.getElementById('progressSummary');
+      const clearSaveBtn = document.getElementById('clearSaveBtn');
+      const closeLevelsBtn = document.getElementById('closeLevelsBtn');
+      const leftBtn = document.getElementById('leftBtn');
+      const rightBtn = document.getElementById('rightBtn');
+      const jumpBtn = document.getElementById('jumpBtn');
+      const rotateOverlay = document.getElementById('rotateOverlay');
+
+      function createRng(seed) {
+        let t = seed >>> 0;
+        return function () {
+          t += 0x6D2B79F5;
+          let r = Math.imul(t ^ (t >>> 15), 1 | t);
+          r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+          return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      const handcraftedLevels = [
+        {
+          name: 'Level 1: Easy Warm-Up',
+          spawn: { x: 50, y: FLOOR_Y - 36 },
+          platforms: [
+            { x: 0, y: FLOOR_Y, width: 320, height: LOGICAL_HEIGHT - FLOOR_Y },
+            { x: 400, y: FLOOR_Y, width: LOGICAL_WIDTH - 400, height: LOGICAL_HEIGHT - FLOOR_Y },
+            { x: 220, y: 310, width: 140, height: 18 },
+            { x: 420, y: 245, width: 150, height: 18 },
+            { x: 600, y: 185, width: 160, height: 18 }
+          ],
+          spikes: [
+            { x: 520, y: FLOOR_Y, width: 48, height: 16 }
+          ],
+          enemies: [],
+          coins: [
+            { x: 290, y: 278 },
+            { x: 495, y: 213 },
+            { x: 635, y: 153 }
+          ],
+          door: { x: 690, y: 185 - 52, width: 36, height: 52 }
+        },
+        {
+          name: 'Level 2: Patrol Stomp',
+          spawn: { x: 45, y: FLOOR_Y - 36 },
+          platforms: [
+            { x: 0, y: FLOOR_Y, width: 210, height: LOGICAL_HEIGHT - FLOOR_Y },
+            { x: 265, y: 315, width: 120, height: 18, vx: 1.3, minX: 245, maxX: 330 },
+            { x: 445, y: 260, width: 160, height: 18 },
+            { x: 260, y: 190, width: 140, height: 18 },
+            { x: 465, y: 145, width: 230, height: 18 }
+          ],
+          spikes: [
+            { x: 135, y: FLOOR_Y, width: 32, height: 16 }
+          ],
+          enemies: [
+            { x: 500, y: 260 - 24, minX: 455, maxX: 595, vx: 1.1 },
+            { x: 520, y: 145 - 24, minX: 475, maxX: 625, vx: -1.1 }
+          ],
+          coins: [
+            { x: 325, y: 270 },
+            { x: 330, y: 158 },
+            { x: 545, y: 110 }
+          ],
+          door: { x: 645, y: 145 - 52, width: 36, height: 52 }
+        },
+        {
+          name: 'Level 3: Sky Gauntlet',
+          spawn: { x: 40, y: FLOOR_Y - 36 },
+          platforms: [
+            { x: 0, y: FLOOR_Y, width: 150, height: LOGICAL_HEIGHT - FLOOR_Y },
+            { x: 205, y: 325, width: 120, height: 18 },
+            { x: 375, y: 270, width: 115, height: 18, vx: 1.6, minX: 360, maxX: 435 },
+            { x: 545, y: 215, width: 140, height: 18 },
+            { x: 380, y: 155, width: 115, height: 18, vx: -1.6, minX: 355, maxX: 430 },
+            { x: 550, y: 115, width: 200, height: 18 }
+          ],
+          spikes: [
+            { x: 250, y: 325, width: 32, height: 16 },
+            { x: 585, y: 115, width: 32, height: 16 }
+          ],
+          enemies: [
+            { x: 585, y: 215 - 24, minX: 555, maxX: 675, vx: 1.3 }
+          ],
+          birds: [
+            { x: 320, y: 205, minX: 250, maxX: 510, vx: 1.7 }
+          ],
+          coins: [
+            { x: 222, y: 292 },
+            { x: 430, y: 225 },
+            { x: 650, y: 83 }
+          ],
+          door: { x: 700, y: 115 - 52, width: 36, height: 52 }
+        },
+        {
+          name: 'Level 4: Final Summit',
+          spawn: { x: 35, y: FLOOR_Y - 36 },
+          platforms: [
+            { x: 0, y: FLOOR_Y, width: 135, height: LOGICAL_HEIGHT - FLOOR_Y },
+            { x: 190, y: 325, width: 105, height: 18, vx: 1.4, minX: 175, maxX: 235 },
+            { x: 355, y: 280, width: 145, height: 18 },
+            { x: 555, y: 230, width: 115, height: 18, vx: -1.6, minX: 530, maxX: 615 },
+            { x: 390, y: 165, width: 130, height: 18 },
+            { x: 205, y: 120, width: 130, height: 18 },
+            { x: 45, y: 95, width: 110, height: 18 }
+          ],
+          spikes: [
+            { x: 410, y: 280, width: 32, height: 16 },
+            { x: 255, y: 120, width: 32, height: 16 }
+          ],
+          enemies: [
+            { x: 420, y: 165 - 24, minX: 400, maxX: 510, vx: 1.3 }
+          ],
+          birds: [
+            { x: 310, y: 210, minX: 190, maxX: 500, vx: -1.9 }
+          ],
+          coins: [
+            { x: 470, y: 245 },
+            { x: 455, y: 133 },
+            { x: 220, y: 88 }
+          ],
+          door: { x: 66, y: 95 - 52, width: 36, height: 52 }
+        }
+      ];
+
+      // Progressive left-to-right generator (Levels 5-101): challenging, varied, 100% reachable
+      function generateLevel(index) {
+        if (index < handcraftedLevels.length) {
+          return handcraftedLevels[index];
+        }
+
+        const levelNum = index + 1;
+        const rng = createRng(levelNum * 9973 + 1337);
+        const progress = (levelNum - 5) / (TOTAL_LEVELS - 5); // 0.0 -> 1.0
+
+        const tierName =
+          levelNum <= 25
+            ? 'Foothills'
+            : levelNum <= 50
+              ? 'Ridge Run'
+              : levelNum <= 75
+                ? 'Skyline'
+                : levelNum < 101
+                  ? 'Apex Trial'
+                  : 'Grand Finale';
+
+        const platforms = [];
+        const spikes = [];
+        const enemies = [];
+        const birds = [];
+        const coins = [];
+
+        // 5 or 6 platforms across x = 0..785 with real gaps and verticality
+        const platCount = levelNum < 30 ? 5 : 6;
+        let curX = 0;
+        let curY = FLOOR_Y;
+
+        const firstW = Math.round(120 - progress * 35); // 120 down to 85
+        platforms.push({
+          x: 0,
+          y: FLOOR_Y,
+          width: firstW,
+          height: LOGICAL_HEIGHT - FLOOR_Y
+        });
+
+        // Optional spike near far edge of starting floor on harder levels
+        if (levelNum >= 20 && firstW >= 100 && rng() < 0.45) {
+          spikes.push({ x: firstW - 36, y: FLOOR_Y, width: 24, height: 14 });
+        }
+
+        curX = firstW;
+
+        for (let s = 1; s < platCount; s++) {
+          const isLast = s === platCount - 1;
+          const minGap = 68 + Math.round(progress * 24);  // 68 -> 92
+          const maxGap = 92 + Math.round(progress * 24);  // 92 -> 116 (max single jump ~136)
+          let gap = Math.round(minGap + rng() * (maxGap - minGap));
+
+          const targetW = isLast
+            ? Math.round(125 - progress * 20)
+            : Math.round((102 - progress * 32) + (rng() - 0.5) * 14); // 102 -> 70
+          let w = Math.max(66, targetW);
+
+          // Ensure we fit cleanly inside 800px
+          const remainingPlats = platCount - 1 - s;
+          const minRemainingSpace = remainingPlats * (70 + minGap);
+          if (curX + gap + w + minRemainingSpace > 785) {
+            gap = Math.max(58, Math.floor((785 - curX - minRemainingSpace - w)));
+            if (curX + gap + w > 785) {
+              w = Math.max(64, 785 - curX - gap);
+            }
+          }
+
+          const platX = curX + gap;
+          // Challenging vertical steps: up to -74px rise (max jump ~116px) or +56px drop
+          const dy = Math.round(-74 + rng() * 130);
+          curY = Math.max(120, Math.min(FLOOR_Y - 14, curY + dy));
+
+          const moveRoll = rng();
+          const moveThreshold = 0.3 + progress * 0.3;
+          const isMovingH = !isLast && moveRoll < moveThreshold * 0.7;
+          const isMovingV = !isLast && !isMovingH && levelNum >= 18 && moveRoll < moveThreshold;
+
+          if (isMovingH) {
+            const travel = Math.round(24 + progress * 30);
+            const minX = Math.max(curX + 46, platX - Math.round(travel * 0.4));
+            const maxX = Math.min(platX + travel, 785 - w);
+            const speed = (1.35 + progress * 1.25) * (rng() < 0.5 ? 1 : -1);
+            platforms.push({
+              x: platX,
+              y: curY,
+              width: w,
+              height: 18,
+              vx: speed,
+              minX: Math.min(minX, platX),
+              maxX: Math.max(maxX, platX)
+            });
+          } else if (isMovingV) {
+            const vTravel = Math.round(22 + progress * 20);
+            const minY = Math.max(110, curY - vTravel);
+            const maxY = Math.min(FLOOR_Y - 22, curY + vTravel);
+            const vySpeed = (0.9 + progress * 0.9) * (rng() < 0.5 ? 1 : -1);
+            platforms.push({
+              x: platX,
+              y: curY,
+              width: w,
+              height: 18,
+              vy: vySpeed,
+              minY: minY,
+              maxY: maxY
+            });
+          } else {
+            platforms.push({
+              x: platX,
+              y: curY,
+              width: w,
+              height: 18
+            });
+
+            // Hazards on static platforms: enemies or spikes (always leaving >=32px safe landing on left)
+            const hazardRoll = rng();
+            if (!isLast && hazardRoll < 0.78) {
+              if (w >= 86 && rng() < 0.52) {
+                enemies.push({
+                  x: Math.round(platX + w / 2 - 14),
+                  y: curY - 24,
+                  minX: platX + 6,
+                  maxX: platX + w - 6,
+                  vx: (1.2 + progress * 1.15) * (rng() < 0.5 ? 1 : -1)
+                });
+              } else if (w >= 72) {
+                const spikeW = w >= 105 && progress > 0.35 ? 48 : 32;
+                const spikeX = Math.round(platX + Math.max(30, (w - spikeW) / 2));
+                if (spikeX + spikeW <= platX + w - 8) {
+                  spikes.push({
+                    x: spikeX,
+                    y: curY,
+                    width: spikeW,
+                    height: 16
+                  });
+                }
+              }
+            } else if (isLast && w >= 115 && progress > 0.25) {
+              // Guard the final platform before the door on harder levels
+              enemies.push({
+                x: Math.round(platX + 18),
+                y: curY - 24,
+                minX: platX + 8,
+                maxX: platX + w - 58,
+                vx: 1.1 + progress * 0.9
+              });
+            }
+          }
+
+          // Place 3 coins per level (some slightly higher to reward good jumps / double jump)
+          if (coins.length < 3 && (isLast || s % 2 === 1 || rng() < 0.65)) {
+            const highBonus = !isLast && rng() < 0.4 ? 22 : 0;
+            coins.push({
+              x: Math.round(platX + (isLast ? 30 : w / 2)),
+              y: curY - 34 - highBonus
+            });
+          }
+
+          curX = platX + w;
+          if (isLast) break;
+        }
+
+        while (coins.length < 3) {
+          const p = platforms[Math.min(platforms.length - 1, coins.length + 1)];
+          coins.push({
+            x: Math.round(p.x + p.width / 2),
+            y: p.y - 34
+          });
+        }
+
+        const lastPlat = platforms[platforms.length - 1];
+        const door = {
+          x: Math.round(lastPlat.x + lastPlat.width - 46),
+          y: lastPlat.y - 52,
+          width: 36,
+          height: 52
+        };
+
+        // Add 1-2 flying birds in mid-air jump lanes to require jump timing
+        const birdCount = levelNum < 25 ? 1 : 2;
+        for (let b = 0; b < birdCount; b++) {
+          const anchorIdx = b === 0 ? 1 : Math.min(platforms.length - 2, 3);
+          const anchor = platforms[anchorIdx];
+          const minBX = Math.max(95, anchor.x - 75);
+          const maxBX = Math.min(LOGICAL_WIDTH - 65, anchor.x + anchor.width + 75);
+          const birdY = Math.max(85, Math.min(310, anchor.y - 68 - Math.round(rng() * 35)));
+          const birdSpeed = (1.55 + progress * 1.45) * (b % 2 === 0 ? 1 : -1);
+          birds.push({
+            x: Math.round((minBX + maxBX) / 2),
+            y: birdY,
+            minX: minBX,
+            maxX: maxBX,
+            vx: birdSpeed
+          });
+        }
+
+        return {
+          name: 'Level ' + levelNum + ': ' + tierName,
+          spawn: { x: 26, y: FLOOR_Y - 36 },
+          platforms: platforms,
+          spikes: spikes,
+          enemies: enemies,
+          birds: birds,
+          coins: coins,
+          door: door
+        };
+      }
+
+      const levels = [];
+      for (let i = 0; i < TOTAL_LEVELS; i++) {
+        levels.push(generateLevel(i));
+      }
+
+      const keys = {
+        left: false,
+        right: false,
+        jump: false
+      };
+
+      const player = {
+        x: 50,
+        y: FLOOR_Y - 36,
+        width: 32,
+        height: 36,
+        vx: 0,
+        vy: 0,
+        speed: 3.3,
+        accel: 0.55,
+        jumpForce: -11.2,
+        gravity: 0.54,
+        onGround: true,
+        facing: 1,
+        scaleX: 1,
+        scaleY: 1,
+        runPhase: 0,
+        dustTimer: 0,
+        bonkTimer: 0,
+        blinkTimer: 120
+      };
+
+      let unlockedLevel = 0;
+      let clearedLevels = {};
+      let levelCoinsMap = {};
+
+      let currentLevelIndex = 0;
+      let activePlatforms = [];
+      let activeEnemies = [];
+      let activeBirds = [];
+      let activeCoins = [];
+      let standingPlatform = null;
+      let doubleJumpAvailable = true;
+      let jumpPressedEdge = false;
+      let levelCoinsCollected = 0;
+      let deaths = 0;
+      let elapsedSeconds = 0;
+      let lastFrameTime = null;
+      let flashTimer = 0;
+      let shakeTimer = 0;
+      let animClock = 0;
+      let levelWon = false;
+      let isDying = false;
+      let deathTimer = 0;
+      let levelFailed = false;
+      let isLevelSelectOpen = false;
+      let dashSpot = null;
+      let particles = [];
+      let isPortrait = false;
+      let animFrameId = null;
+      let isMuted = false;
+      let audioCtx = null;
+
+      function loadProgress() {
+        try {
+          const raw = localStorage.getItem(SAVE_KEY);
+          if (!raw) return;
+          const data = JSON.parse(raw);
+          if (typeof data.unlockedLevel === 'number') {
+            unlockedLevel = Math.max(0, Math.min(TOTAL_LEVELS - 1, data.unlockedLevel));
+          }
+          if (data.clearedLevels && typeof data.clearedLevels === 'object') {
+            clearedLevels = data.clearedLevels;
+          }
+          if (data.levelCoinsMap && typeof data.levelCoinsMap === 'object') {
+            levelCoinsMap = data.levelCoinsMap;
+          }
+        } catch (err) {
+          // Ignore storage restrictions
+        }
+      }
+
+      function saveProgress() {
+        try {
+          localStorage.setItem(
+            SAVE_KEY,
+            JSON.stringify({
+              unlockedLevel: unlockedLevel,
+              clearedLevels: clearedLevels,
+              levelCoinsMap: levelCoinsMap
+            })
+          );
+        } catch (err) {
+          // Ignore storage restrictions
+        }
+      }
+
+      function getCurrentLevel() {
+        return levels[currentLevelIndex];
+      }
+
+      function clonePlatforms(list) {
+        return list.map(function (p) {
+          return {
+            x: p.x,
+            y: p.y,
+            width: p.width,
+            height: p.height,
+            vx: p.vx || 0,
+            vy: p.vy || 0,
+            minX: p.minX !== undefined ? p.minX : p.x,
+            maxX: p.maxX !== undefined ? p.maxX : p.x,
+            minY: p.minY !== undefined ? p.minY : p.y,
+            maxY: p.maxY !== undefined ? p.maxY : p.y,
+            dx: 0,
+            dy: 0
+          };
+        });
+      }
+
+      function cloneBirds(list) {
+        return (list || []).map(function (b, idx) {
+          return {
+            x: b.x,
+            y: b.y,
+            baseY: b.y,
+            width: 30,
+            height: 22,
+            minX: b.minX,
+            maxX: b.maxX,
+            vx: b.vx,
+            phase: idx * 1.7,
+            alive: true,
+            squishTimer: 0
+          };
+        });
+      }
+
+      function cloneEnemies(list) {
+        return (list || []).map(function (e) {
+          return {
+            x: e.x,
+            y: e.y,
+            width: 28,
+            height: 24,
+            minX: e.minX,
+            maxX: e.maxX,
+            vx: e.vx,
+            alive: true,
+            squishTimer: 0
+          };
+        });
+      }
+
+      function cloneCoins(list) {
+        return list.map(function (c) {
+          return { x: c.x, y: c.y, r: 10, collected: false };
+        });
+      }
+
+      function ensureAudio() {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+          }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(function () {});
+        }
+      }
+
+      function playTone(freqStart, freqEnd, duration, delay) {
+        if (isMuted) return;
+        ensureAudio();
+        if (!audioCtx) return;
+
+        const startAt = audioCtx.currentTime + (delay || 0);
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freqStart, startAt);
+        osc.frequency.exponentialRampToValueAtTime(freqEnd, startAt + duration);
+
+        gain.gain.setValueAtTime(0.08, startAt);
+        gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(startAt);
+        osc.stop(startAt + duration);
+      }
+
+      function playDoubleJumpSound() {
+        playTone(390, 740, 0.14, 0);
+      }
+
+      function playStompSound() {
+        playTone(320, 140, 0.1, 0);
+        playTone(460, 620, 0.08, 0.06);
+      }
+
+      function playCoinSound() {
+        playTone(660, 990, 0.09, 0);
+      }
+
+      function playWinSound() {
+        playTone(440, 523, 0.1, 0);
+        playTone(523, 659, 0.1, 0.09);
+        playTone(659, 784, 0.18, 0.18);
+      }
+
+      function playHitSound() {
+        playTone(220, 80, 0.16, 0);
+      }
+
+      function checkOrientation() {
+        isPortrait = window.innerHeight > window.innerWidth;
+        if (isPortrait) {
+          rotateOverlay.classList.add('visible');
+          keys.left = false;
+          keys.right = false;
+          keys.jump = false;
+        } else {
+          rotateOverlay.classList.remove('visible');
+        }
+      }
+
+      function resizeCanvas() {
+        checkOrientation();
+        const rect = canvasWrap.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+        canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+        draw();
+      }
+
+      function updateHud() {
+        const lvl = getCurrentLevel();
+        levelTitleEl.textContent = lvl.name;
+        levelCounterEl.textContent = 'Level ' + (currentLevelIndex + 1) + ' / ' + TOTAL_LEVELS;
+        powerStatusEl.textContent = doubleJumpAvailable ? 'Double Jump: Ready' : 'Double Jump: Used';
+        if (doubleJumpAvailable) {
+          powerStatusEl.classList.remove('used');
+        } else {
+          powerStatusEl.classList.add('used');
+        }
+        coinCounterEl.textContent = 'Coins: ' + levelCoinsCollected + ' / ' + lvl.coins.length;
+        deathCounterEl.textContent = 'Deaths: ' + deaths;
+        timerDisplayEl.textContent = 'Time: ' + elapsedSeconds.toFixed(1) + 's';
+      }
+
+      function renderLevelGrid() {
+        const clearedCount = Object.keys(clearedLevels).length;
+        progressSummary.textContent =
+          'Unlocked: ' + (unlockedLevel + 1) + ' / ' + TOTAL_LEVELS + '  |  Cleared: ' + clearedCount;
+
+        levelGrid.innerHTML = '';
+        for (let i = 0; i < TOTAL_LEVELS; i++) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'level-tile';
+          const isUnlocked = i <= unlockedLevel;
+          const isCleared = !!clearedLevels[i];
+          const isCurrent = i === currentLevelIndex;
+
+          if (!isUnlocked) {
+            btn.classList.add('locked');
+            btn.disabled = true;
+            btn.innerHTML = '<span>' + (i + 1) + '</span><span class="level-tile-sub">Locked</span>';
+          } else {
+            if (isCleared) btn.classList.add('cleared');
+            if (isCurrent) btn.classList.add('current');
+            const sub = isCleared ? 'Cleared' : (isCurrent ? 'Now' : 'Play');
+            btn.innerHTML = '<span>' + (i + 1) + '</span><span class="level-tile-sub">' + sub + '</span>';
+            btn.addEventListener('click', (function (targetIdx) {
+              return function () {
+                ensureAudio();
+                closeLevelSelect();
+                loadLevel(targetIdx);
+              };
+            })(i));
+          }
+          levelGrid.appendChild(btn);
+        }
+      }
+
+      function openLevelSelect() {
+        isLevelSelectOpen = true;
+        keys.left = false;
+        keys.right = false;
+        keys.jump = false;
+        renderLevelGrid();
+        levelSelectOverlay.classList.add('visible');
+      }
+
+      function closeLevelSelect() {
+        isLevelSelectOpen = false;
+        levelSelectOverlay.classList.remove('visible');
+      }
+
+      function spawnDust(cx, cy, count, spreadX, colorOverride) {
+        for (let i = 0; i < count; i++) {
+          particles.push({
+            x: cx + (Math.random() - 0.5) * 10,
+            y: cy - 2,
+            vx: (Math.random() - 0.5) * spreadX,
+            vy: -0.5 - Math.random() * 1.4,
+            size: 3.5 + Math.random() * 3,
+            life: 0.75,
+            color: colorOverride || '#d8c99b'
+          });
+        }
+      }
+
+      function spawnCoinSparkle(cx, cy) {
+        for (let i = 0; i < 8; i++) {
+          const angle = (Math.PI * 2 * i) / 8;
+          particles.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(angle) * 2.2,
+            vy: Math.sin(angle) * 2.2 - 1,
+            size: 4,
+            life: 0.9,
+            color: '#e9c46a'
+          });
+        }
+      }
+
+      function spawnDashEffect(x, y, w, h) {
+        const clampedY = Math.min(y, LOGICAL_HEIGHT - h - 10);
+        const cx = x + w / 2;
+        const cy = clampedY + h / 2;
+        dashSpot = { x: x, y: clampedY, w: w, h: h, cx: cx, cy: cy, age: 0 };
+        particles = [];
+        for (let i = 0; i < 24; i++) {
+          const angle = (Math.PI * 2 * i) / 24 + (Math.random() - 0.5) * 0.3;
+          const speed = 2.4 + Math.random() * 4.8;
+          particles.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 2.5,
+            size: 5 + Math.random() * 6,
+            life: 1,
+            color: i % 3 === 0 ? '#d62828' : (i % 2 === 0 ? '#e07a5f' : '#2b2d42')
+          });
+        }
+      }
+
+      function triggerObstacleHit(reason) {
+        if (isDying || levelFailed || levelWon) return;
+        deaths += 1;
+        updateHud();
+        isDying = true;
+        deathTimer = 36;
+        flashTimer = 10;
+        shakeTimer = 10;
+        keys.left = false;
+        keys.right = false;
+        keys.jump = false;
+        jumpPressedEdge = false;
+        failSummary.textContent = reason;
+        spawnDashEffect(player.x, player.y, player.width, player.height);
+        playHitSound();
+      }
+
+      function respawnPlayer() {
+        const lvl = getCurrentLevel();
+        activePlatforms = clonePlatforms(lvl.platforms);
+        activeEnemies = cloneEnemies(lvl.enemies);
+        activeBirds = cloneBirds(lvl.birds);
+        activeCoins = cloneCoins(lvl.coins);
+        standingPlatform = null;
+        doubleJumpAvailable = true;
+        jumpPressedEdge = false;
+        levelCoinsCollected = 0;
+        isDying = false;
+        deathTimer = 0;
+        levelFailed = false;
+        dashSpot = null;
+        particles = [];
+        failOverlay.classList.remove('visible');
+        player.x = lvl.spawn.x;
+        player.y = lvl.spawn.y;
+        player.vx = 0;
+        player.vy = 0;
+        player.onGround = true;
+        player.facing = 1;
+        player.scaleX = 1;
+        player.scaleY = 1;
+        player.runPhase = 0;
+        player.bonkTimer = 0;
+        updateHud();
+      }
+
+      function loadLevel(index) {
+        currentLevelIndex = Math.max(0, Math.min(TOTAL_LEVELS - 1, index));
+        elapsedSeconds = 0;
+        levelWon = false;
+        winOverlay.classList.remove('visible');
+        respawnPlayer();
+      }
+
+      function fullReset() {
+        deaths = 0;
+        flashTimer = 0;
+        shakeTimer = 0;
+        loadLevel(currentLevelIndex);
+      }
+
+      function rectsOverlap(a, b) {
+        return (
+          a.x < b.x + b.width &&
+          a.x + a.width > b.x &&
+          a.y < b.y + b.height &&
+          a.y + a.height > b.y
+        );
+      }
+
+      function updateParticles() {
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.22;
+          p.life -= 0.032;
+          if (p.life <= 0) {
+            particles.splice(i, 1);
+          }
+        }
+      }
+
+      function update(dt) {
+        animClock += dt * 4;
+        if (flashTimer > 0) flashTimer -= 1;
+        if (shakeTimer > 0) shakeTimer -= 1;
+        if (dashSpot) dashSpot.age += 1;
+        updateParticles();
+
+        if (isDying) {
+          deathTimer -= 1;
+          if (deathTimer <= 0) {
+            isDying = false;
+            levelFailed = true;
+            failOverlay.classList.add('visible');
+          }
+          return;
+        }
+
+        if (levelWon || levelFailed || isLevelSelectOpen || isPortrait) return;
+
+        const dtScale = dt * 60;
+        elapsedSeconds += dt;
+        timerDisplayEl.textContent = 'Time: ' + elapsedSeconds.toFixed(1) + 's';
+
+        const lvl = getCurrentLevel();
+
+        // Update moving platforms
+        for (let i = 0; i < activePlatforms.length; i++) {
+          const p = activePlatforms[i];
+          if (p.vx !== 0) {
+            const oldX = p.x;
+            p.x += p.vx * dtScale;
+            if (p.x <= p.minX) {
+              p.x = p.minX;
+              p.vx = Math.abs(p.vx);
+            } else if (p.x >= p.maxX) {
+              p.x = p.maxX;
+              p.vx = -Math.abs(p.vx);
+            }
+            p.dx = p.x - oldX;
+          } else {
+            p.dx = 0;
+          }
+          if (p.vy !== 0) {
+            const oldY = p.y;
+            p.y += p.vy * dtScale;
+            if (p.y <= p.minY) {
+              p.y = p.minY;
+              p.vy = Math.abs(p.vy);
+            } else if (p.y >= p.maxY) {
+              p.y = p.maxY;
+              p.vy = -Math.abs(p.vy);
+            }
+            p.dy = p.y - oldY;
+          } else {
+            p.dy = 0;
+          }
+        }
+
+        // Update flying birds
+        for (let i = 0; i < activeBirds.length; i++) {
+          const b = activeBirds[i];
+          if (!b.alive) {
+            if (b.squishTimer > 0) b.squishTimer -= dtScale;
+            continue;
+          }
+          b.x += b.vx * dtScale;
+          if (b.x <= b.minX) {
+            b.x = b.minX;
+            b.vx = Math.abs(b.vx);
+          } else if (b.x + b.width >= b.maxX) {
+            b.x = b.maxX - b.width;
+            b.vx = -Math.abs(b.vx);
+          }
+          b.y = b.baseY + Math.sin(animClock * 1.6 + b.phase) * 10;
+        }
+
+        // Update patrolling enemies
+        for (let i = 0; i < activeEnemies.length; i++) {
+          const e = activeEnemies[i];
+          if (!e.alive) {
+            if (e.squishTimer > 0) e.squishTimer -= dtScale;
+            continue;
+          }
+          e.x += e.vx * dtScale;
+          if (e.x <= e.minX) {
+            e.x = e.minX;
+            e.vx = Math.abs(e.vx);
+          } else if (e.x + e.width >= e.maxX) {
+            e.x = e.maxX - e.width;
+            e.vx = -Math.abs(e.vx);
+          }
+        }
+
+        if (standingPlatform) {
+          if (standingPlatform.dx) player.x += standingPlatform.dx;
+          if (standingPlatform.dy) player.y += standingPlatform.dy;
+        }
+
+        const accelStep = player.accel * dtScale;
+        if (keys.left && !keys.right) {
+          player.vx = Math.max(-player.speed, player.vx - accelStep);
+          player.facing = -1;
+        } else if (keys.right && !keys.left) {
+          player.vx = Math.min(player.speed, player.vx + accelStep);
+          player.facing = 1;
+        } else {
+          player.vx *= Math.pow(0.68, dtScale);
+          if (Math.abs(player.vx) < 0.08) player.vx = 0;
+        }
+
+        // Ground jump OR single-use-per-level Double Jump on fresh press
+        if (keys.jump && player.onGround) {
+          player.vy = player.jumpForce;
+          player.onGround = false;
+          standingPlatform = null;
+          jumpPressedEdge = false;
+          player.scaleX = 0.82;
+          player.scaleY = 1.22;
+          spawnDust(player.x + player.width / 2, player.y + player.height, 5, 2.8);
+          playTone(260, 520, 0.12);
+        } else if (jumpPressedEdge && !player.onGround && doubleJumpAvailable) {
+          doubleJumpAvailable = false;
+          jumpPressedEdge = false;
+          player.vy = player.jumpForce * 0.94;
+          player.scaleX = 0.8;
+          player.scaleY = 1.24;
+          spawnDust(player.x + player.width / 2, player.y + player.height, 8, 4.2, '#4ecdc4');
+          playDoubleJumpSound();
+          updateHud();
+        }
+        jumpPressedEdge = false;
+
+        player.vy += player.gravity * dtScale;
+        if (player.vy > 13) player.vy = 13;
+
+        player.x += player.vx * dtScale;
+        if (player.x < 0) {
+          player.x = 0;
+          player.vx = 0;
+        }
+        if (player.x + player.width > LOGICAL_WIDTH) {
+          player.x = LOGICAL_WIDTH - player.width;
+          player.vx = 0;
+        }
+
+        for (let i = 0; i < activePlatforms.length; i++) {
+          const p = activePlatforms[i];
+          if (rectsOverlap(player, p)) {
+            if (player.vx > 0) {
+              player.x = p.x - player.width;
+              if (player.vx > 1.2) {
+                player.scaleX = 0.85;
+                player.scaleY = 1.12;
+              }
+              player.vx = 0;
+            } else if (player.vx < 0) {
+              player.x = p.x + p.width;
+              if (player.vx < -1.2) {
+                player.scaleX = 0.85;
+                player.scaleY = 1.12;
+              }
+              player.vx = 0;
+            }
+          }
+        }
+
+        const prevBottom = player.y + player.height;
+        const wasOnGround = player.onGround;
+        player.onGround = false;
+        standingPlatform = null;
+        player.y += player.vy * dtScale;
+
+        for (let i = 0; i < activePlatforms.length; i++) {
+          const p = activePlatforms[i];
+          if (rectsOverlap(player, p)) {
+            if (player.vy > 0) {
+              if (!wasOnGround && player.vy > 2.5) {
+                player.scaleX = 1.24;
+                player.scaleY = 0.76;
+                spawnDust(player.x + player.width / 2, p.y, 6, 3.4);
+                playTone(150, 90, 0.06);
+              }
+              player.y = p.y - player.height;
+              player.vy = 0;
+              player.onGround = true;
+              standingPlatform = p;
+            } else if (player.vy < 0) {
+              player.y = p.y + p.height;
+              player.vy = 0;
+              player.scaleX = 1.18;
+              player.scaleY = 0.82;
+              player.bonkTimer = 14;
+              spawnDust(player.x + player.width / 2, p.y + p.height + 4, 4, 2.5);
+              playTone(180, 110, 0.07);
+            }
+          }
+        }
+
+        // Character reactions
+        const spring = Math.min(1, 0.22 * dtScale);
+        player.scaleX += (1 - player.scaleX) * spring;
+        player.scaleY += (1 - player.scaleY) * spring;
+        if (player.bonkTimer > 0) player.bonkTimer -= dtScale;
+        player.blinkTimer -= dtScale;
+        if (player.blinkTimer < -6) player.blinkTimer = 110 + Math.random() * 90;
+
+        if (player.onGround && Math.abs(player.vx) > 0.6) {
+          player.runPhase += Math.abs(player.vx) * 0.14 * dtScale;
+          player.dustTimer -= dtScale;
+          if (player.dustTimer <= 0) {
+            spawnDust(player.x + player.width / 2 - player.facing * 8, player.y + player.height, 1, 1.2);
+            player.dustTimer = 7;
+          }
+        } else {
+          player.runPhase = 0;
+        }
+
+        // Flying bird collisions (stompable from above, hazard from side/below)
+        for (let i = 0; i < activeBirds.length; i++) {
+          const b = activeBirds[i];
+          if (!b.alive) continue;
+          if (rectsOverlap(player, b)) {
+            if (player.vy > 0 && prevBottom <= b.y + 12) {
+              b.alive = false;
+              b.squishTimer = 18;
+              player.vy = -8.8;
+              player.onGround = false;
+              player.scaleX = 1.2;
+              player.scaleY = 0.8;
+              spawnDust(b.x + b.width / 2, b.y + 6, 8, 3.8, '#5e548e');
+              playStompSound();
+            } else {
+              triggerObstacleHit('You hit a flying bird!');
+              return;
+            }
+          }
+        }
+
+        // Enemy collisions (Mario-style head stomp vs side hit)
+        for (let i = 0; i < activeEnemies.length; i++) {
+          const e = activeEnemies[i];
+          if (!e.alive) continue;
+          if (rectsOverlap(player, e)) {
+            if (player.vy > 0 && prevBottom <= e.y + 12) {
+              // Stomped on enemy's head!
+              e.alive = false;
+              e.squishTimer = 18;
+              player.vy = -8.6;
+              player.onGround = false;
+              player.scaleX = 1.2;
+              player.scaleY = 0.8;
+              spawnDust(e.x + e.width / 2, e.y + 4, 8, 3.8, '#8d5b4c');
+              playStompSound();
+            } else {
+              triggerObstacleHit('You ran into an enemy!');
+              return;
+            }
+          }
+        }
+
+        // Collect coins
+        for (let i = 0; i < activeCoins.length; i++) {
+          const c = activeCoins[i];
+          if (c.collected) continue;
+          const coinBox = { x: c.x - c.r, y: c.y - c.r, width: c.r * 2, height: c.r * 2 };
+          if (rectsOverlap(player, coinBox)) {
+            c.collected = true;
+            levelCoinsCollected += 1;
+            updateHud();
+            spawnCoinSparkle(c.x, c.y);
+            playCoinSound();
+          }
+        }
+
+        if (player.y > LOGICAL_HEIGHT - 4) {
+          triggerObstacleHit('You fell into a gap.');
+          return;
+        }
+
+        for (let i = 0; i < lvl.spikes.length; i++) {
+          const s = lvl.spikes[i];
+          const spikeBox = {
+            x: s.x + 4,
+            y: s.y - s.height + 4,
+            width: s.width - 8,
+            height: s.height - 4
+          };
+          if (rectsOverlap(player, spikeBox)) {
+            triggerObstacleHit('You touched a spike!');
+            return;
+          }
+        }
+
+        if (rectsOverlap(player, lvl.door)) {
+          levelWon = true;
+          keys.left = false;
+          keys.right = false;
+          keys.jump = false;
+          playWinSound();
+
+          clearedLevels[currentLevelIndex] = true;
+          const prevCoins = levelCoinsMap[currentLevelIndex] || 0;
+          if (levelCoinsCollected > prevCoins) {
+            levelCoinsMap[currentLevelIndex] = levelCoinsCollected;
+          }
+          if (currentLevelIndex + 1 > unlockedLevel && currentLevelIndex + 1 < TOTAL_LEVELS) {
+            unlockedLevel = currentLevelIndex + 1;
+          }
+          saveProgress();
+
+          const isLastLevel = currentLevelIndex === TOTAL_LEVELS - 1;
+          if (isLastLevel) {
+            winHeading.textContent = 'You Beat All 101 Levels!';
+            winSummary.textContent =
+              'Level Time: ' + elapsedSeconds.toFixed(1) + 's  |  Coins: ' +
+              levelCoinsCollected + ' / ' + lvl.coins.length + '  |  Total Deaths: ' + deaths;
+            nextLevelBtn.style.display = 'none';
+            playAgainBtn.style.display = 'inline-block';
+          } else {
+            winHeading.textContent = 'Level ' + (currentLevelIndex + 1) + ' Cleared & Saved!';
+            winSummary.textContent =
+              'Time: ' + elapsedSeconds.toFixed(1) + 's  |  Coins: ' +
+              levelCoinsCollected + ' / ' + lvl.coins.length;
+            nextLevelBtn.style.display = 'inline-block';
+            playAgainBtn.style.display = 'none';
+          }
+          winOverlay.classList.add('visible');
+        }
+      }
+
+      function drawSpikes(s) {
+        const spikeCount = Math.max(1, Math.floor(s.width / 16));
+        const singleWidth = s.width / spikeCount;
+
+        ctx.fillStyle = '#d62828';
+        ctx.strokeStyle = '#2b2d42';
+        ctx.lineWidth = 2;
+
+        for (let i = 0; i < spikeCount; i++) {
+          const sx = s.x + i * singleWidth;
+          ctx.beginPath();
+          ctx.moveTo(sx, s.y);
+          ctx.lineTo(sx + singleWidth / 2, s.y - s.height);
+          ctx.lineTo(sx + singleWidth, s.y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+
+      function drawCoins() {
+        const bob = Math.sin(animClock) * 3;
+        for (let i = 0; i < activeCoins.length; i++) {
+          const c = activeCoins[i];
+          if (c.collected) continue;
+
+          ctx.save();
+          ctx.fillStyle = '#e9c46a';
+          ctx.strokeStyle = '#2b2d42';
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.arc(c.x, c.y + bob, c.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#f4f1de';
+          ctx.beginPath();
+          ctx.arc(c.x - 2.5, c.y + bob - 2.5, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      function drawBirds() {
+        for (let i = 0; i < activeBirds.length; i++) {
+          const b = activeBirds[i];
+          if (!b.alive) {
+            if (b.squishTimer > 0) {
+              ctx.save();
+              ctx.globalAlpha = Math.max(0, b.squishTimer / 18);
+              ctx.fillStyle = '#5e548e';
+              ctx.strokeStyle = '#2b2d42';
+              ctx.lineWidth = 2;
+              drawRoundedRect(b.x, b.y + 8, b.width, 10, 4);
+              ctx.fill();
+              ctx.stroke();
+              ctx.restore();
+            }
+            continue;
+          }
+
+          const facingRight = b.vx >= 0;
+          const flap = Math.sin(animClock * 5 + b.phase) * 7;
+          const cx = b.x + b.width / 2;
+          const cy = b.y + b.height / 2;
+
+          ctx.save();
+          ctx.translate(cx, cy);
+          if (!facingRight) ctx.scale(-1, 1);
+
+          // Flapping wing
+          ctx.fillStyle = '#9f86c0';
+          ctx.strokeStyle = '#2b2d42';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-4, -2);
+          ctx.quadraticCurveTo(-10, -14 + flap, 4, -4);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Bird body
+          ctx.fillStyle = '#5e548e';
+          ctx.beginPath();
+          ctx.ellipse(0, 1, 13, 9, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          // Tail feathers
+          ctx.beginPath();
+          ctx.moveTo(-11, 0);
+          ctx.lineTo(-17, -4);
+          ctx.lineTo(-15, 3);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Sharp beak
+          ctx.fillStyle = '#f4a261';
+          ctx.beginPath();
+          ctx.moveTo(11, -2);
+          ctx.lineTo(18, 1);
+          ctx.lineTo(11, 4);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Eye + determined brow
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(6, -2, 3.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#2b2d42';
+          ctx.beginPath();
+          ctx.arc(7, -2, 1.6, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#2b2d42';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(3, -6);
+          ctx.lineTo(9, -4);
+          ctx.stroke();
+
+          ctx.restore();
+        }
+      }
+
+      function drawEnemies() {
+        for (let i = 0; i < activeEnemies.length; i++) {
+          const e = activeEnemies[i];
+          if (!e.alive) {
+            if (e.squishTimer > 0) {
+              ctx.save();
+              ctx.globalAlpha = Math.max(0, e.squishTimer / 18);
+              ctx.fillStyle = '#8d5b4c';
+              ctx.strokeStyle = '#2b2d42';
+              ctx.lineWidth = 2;
+              drawRoundedRect(e.x - 3, e.y + e.height - 8, e.width + 6, 8, 3);
+              ctx.fill();
+              ctx.stroke();
+              ctx.restore();
+            }
+            continue;
+          }
+
+          ctx.save();
+          // Patrol enemy body (Mario Goomba-inspired rounded critter)
+          ctx.fillStyle = '#8d5b4c';
+          ctx.strokeStyle = '#2b2d42';
+          ctx.lineWidth = 2.2;
+          drawRoundedRect(e.x, e.y, e.width, e.height - 4, 8);
+          ctx.fill();
+          ctx.stroke();
+
+          // Feet
+          const step = Math.sin(animClock * 3 + i) * 2.5;
+          ctx.fillStyle = '#2b2d42';
+          ctx.fillRect(e.x + 3 + step, e.y + e.height - 5, 7, 5);
+          ctx.fillRect(e.x + e.width - 10 - step, e.y + e.height - 5, 7, 5);
+
+          // Angry eyes
+          const dir = e.vx >= 0 ? 1.5 : -1.5;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(e.x + 5 + dir, e.y + 7, 6, 6);
+          ctx.fillRect(e.x + 17 + dir, e.y + 7, 6, 6);
+          ctx.fillStyle = '#2b2d42';
+          ctx.fillRect(e.x + 7 + dir, e.y + 9, 3, 3);
+          ctx.fillRect(e.x + 19 + dir, e.y + 9, 3, 3);
+
+          // Angry brow
+          ctx.strokeStyle = '#2b2d42';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(e.x + 4 + dir, e.y + 5);
+          ctx.lineTo(e.x + 12 + dir, e.y + 8);
+          ctx.moveTo(e.x + 24 + dir, e.y + 5);
+          ctx.lineTo(e.x + 16 + dir, e.y + 8);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      function drawRoundedRect(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      function drawPlayerCharacter() {
+        const w = player.width;
+        const h = player.height;
+        const cx = player.x + w / 2;
+        const bottomY = player.y + h;
+        const runBob = player.onGround && Math.abs(player.vx) > 0.5 ? Math.abs(Math.sin(player.runPhase)) * 2.5 : 0;
+        const tilt = (player.vx / player.speed) * 0.1;
+
+        ctx.save();
+        ctx.translate(cx, bottomY - runBob);
+        ctx.rotate(tilt);
+        ctx.scale(player.scaleX, player.scaleY);
+
+        const stride = player.onGround ? Math.sin(player.runPhase) * 5 : (player.vy < 0 ? -3 : 3);
+        ctx.fillStyle = '#2b2d42';
+        drawRoundedRect(-11 + stride, -6, 9, 6, 2.5);
+        ctx.fill();
+        drawRoundedRect(2 - stride, -6, 9, 6, 2.5);
+        ctx.fill();
+
+        const scarfDir = -player.facing;
+        const wave = Math.sin(animClock * 2.5 + player.runPhase) * 2.5;
+        ctx.strokeStyle = doubleJumpAvailable ? '#4ecdc4' : '#2a9d8f';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(scarfDir * 12, -h + 11);
+        ctx.quadraticCurveTo(scarfDir * 20, -h + 9 + wave, scarfDir * 25, -h + 13 - wave);
+        ctx.stroke();
+
+        const bodyH = h - 4;
+        drawRoundedRect(-w / 2, -bodyH - 2, w, bodyH, 9);
+        ctx.fillStyle = '#e07a5f';
+        ctx.fill();
+
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.fillRect(-w / 2, -bodyH - 2, w, 7);
+        ctx.restore();
+
+        drawRoundedRect(-w / 2, -bodyH - 2, w, bodyH, 9);
+        ctx.strokeStyle = '#2b2d42';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        ctx.fillStyle = doubleJumpAvailable ? '#4ecdc4' : '#2a9d8f';
+        ctx.fillRect(-w / 2 + 2, -bodyH + 6, w - 4, 4);
+
+        const lookX = player.facing * 3.5;
+        const lookY = !player.onGround ? (player.vy < 0 ? -2 : 2) : 0;
+        const eyeY = -bodyH + 17 + lookY * 0.5;
+        const leftEyeX = -6 + lookX;
+        const rightEyeX = 6 + lookX;
+
+        ctx.fillStyle = 'rgba(214, 40, 40, 0.28)';
+        ctx.beginPath();
+        ctx.arc(leftEyeX - 3, eyeY + 5, 2.5, 0, Math.PI * 2);
+        ctx.arc(rightEyeX + 3, eyeY + 5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (player.bonkTimer > 0) {
+          ctx.strokeStyle = '#2b2d42';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(leftEyeX - 3, eyeY - 2);
+          ctx.lineTo(leftEyeX + 2, eyeY);
+          ctx.lineTo(leftEyeX - 3, eyeY + 2);
+          ctx.moveTo(rightEyeX + 3, eyeY - 2);
+          ctx.lineTo(rightEyeX - 2, eyeY);
+          ctx.lineTo(rightEyeX + 3, eyeY + 2);
+          ctx.stroke();
+        } else if (player.blinkTimer < 0 && player.onGround) {
+          ctx.strokeStyle = '#2b2d42';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(leftEyeX - 3, eyeY);
+          ctx.lineTo(leftEyeX + 3, eyeY);
+          ctx.moveTo(rightEyeX - 3, eyeY);
+          ctx.lineTo(rightEyeX + 3, eyeY);
+          ctx.stroke();
+        } else {
+          const eyeRadius = !player.onGround && player.vy < 0 ? 4.2 : 3.6;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(leftEyeX, eyeY, eyeRadius, 0, Math.PI * 2);
+          ctx.arc(rightEyeX, eyeY, eyeRadius, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#2b2d42';
+          ctx.beginPath();
+          ctx.arc(leftEyeX + player.facing * 1.1, eyeY + lookY * 0.35, 2.1, 0, Math.PI * 2);
+          ctx.arc(rightEyeX + player.facing * 1.1, eyeY + lookY * 0.35, 2.1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      function draw() {
+        const lvl = getCurrentLevel();
+        const scaleX = canvas.width / LOGICAL_WIDTH;
+        const scaleY = canvas.height / LOGICAL_HEIGHT;
+
+        ctx.save();
+        ctx.scale(scaleX, scaleY);
+        if (shakeTimer > 0) {
+          ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+        }
+
+        ctx.fillStyle = '#f3e5ab';
+        ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+
+        ctx.strokeStyle = 'rgba(43, 45, 66, 0.06)';
+        ctx.lineWidth = 1;
+        for (let gx = 0; gx < LOGICAL_WIDTH; gx += 40) {
+          ctx.beginPath();
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, LOGICAL_HEIGHT);
+          ctx.stroke();
+        }
+        for (let gy = 0; gy < LOGICAL_HEIGHT; gy += 40) {
+          ctx.beginPath();
+          ctx.moveTo(0, gy);
+          ctx.lineTo(LOGICAL_WIDTH, gy);
+          ctx.stroke();
+        }
+
+        for (let i = 0; i < activePlatforms.length; i++) {
+          const p = activePlatforms[i];
+          const isMovingPlat = p.vx !== 0 || p.vy !== 0;
+          ctx.fillStyle = isMovingPlat ? '#3d405b' : '#2b2d42';
+          ctx.fillRect(p.x, p.y, p.width, p.height);
+
+          ctx.fillStyle = isMovingPlat ? '#e9c46a' : '#3d405b';
+          ctx.fillRect(p.x, p.y, p.width, 5);
+        }
+
+        for (let i = 0; i < lvl.spikes.length; i++) {
+          drawSpikes(lvl.spikes[i]);
+        }
+
+        drawEnemies();
+        drawBirds();
+        drawCoins();
+
+        const door = lvl.door;
+        ctx.fillStyle = '#2a9d8f';
+        ctx.fillRect(door.x, door.y, door.width, door.height);
+        ctx.strokeStyle = '#2b2d42';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(door.x, door.y, door.width, door.height);
+
+        ctx.fillStyle = '#21867a';
+        ctx.fillRect(door.x + 6, door.y + 6, door.width - 12, door.height - 10);
+        ctx.fillStyle = '#f3e5ab';
+        ctx.beginPath();
+        ctx.arc(door.x + door.width - 10, door.y + door.height / 2 + 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (!isDying && !levelFailed) {
+          drawPlayerCharacter();
+        }
+
+        if (dashSpot) {
+          const pulse = Math.min(1, dashSpot.age / 16);
+          const expand = pulse * 10;
+          ctx.save();
+          ctx.setLineDash([6, 4]);
+          ctx.lineDashOffset = -dashSpot.age * 0.8;
+          ctx.strokeStyle = '#d62828';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(
+            dashSpot.x - expand * 0.4,
+            dashSpot.y - expand * 0.4,
+            dashSpot.w + expand * 0.8,
+            dashSpot.h + expand * 0.8
+          );
+          ctx.beginPath();
+          ctx.arc(dashSpot.cx, dashSpot.cy, 12 + pulse * 24, 0, Math.PI * 2);
+          ctx.globalAlpha = Math.max(0.25, 1 - pulse * 0.7);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.life);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+          ctx.restore();
+        }
+
+        if (flashTimer > 0) {
+          ctx.fillStyle = 'rgba(214, 40, 40, ' + (flashTimer / 25) + ')';
+          ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+        }
+
+        ctx.restore();
+      }
+
+      function gameLoop(timestamp) {
+        if (lastFrameTime === null) lastFrameTime = timestamp;
+        const dt = Math.min(0.05, (timestamp - lastFrameTime) / 1000);
+        lastFrameTime = timestamp;
+        update(dt);
+        draw();
+        animFrameId = window.requestAnimationFrame(gameLoop);
+      }
+
+      window.addEventListener('keydown', function (e) {
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', ' '].includes(e.key) || e.code === 'Space') {
+          e.preventDefault();
+        }
+        if (e.key === 'Escape' && isLevelSelectOpen) {
+          closeLevelSelect();
+          return;
+        }
+        if (isLevelSelectOpen) return;
+
+        if (e.key === 'r' || e.key === 'R') {
+          if (levelFailed) {
+            respawnPlayer();
+          } else {
+            fullReset();
+          }
+          return;
+        }
+        if (levelFailed) {
+          if (e.key === 'Enter' || e.code === 'Space') {
+            respawnPlayer();
+          }
+          return;
+        }
+        if (levelWon) {
+          if (e.key === 'Enter' || e.code === 'Space') {
+            if (currentLevelIndex < TOTAL_LEVELS - 1) {
+              loadLevel(currentLevelIndex + 1);
+            } else {
+              loadLevel(0);
+            }
+          }
+          return;
+        }
+        if (isDying || isPortrait) return;
+
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') {
+          ensureAudio();
+          if (!keys.jump) jumpPressedEdge = true;
+          keys.jump = true;
+        }
+      });
+
+      window.addEventListener('keyup', function (e) {
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') keys.jump = false;
+      });
+
+      function bindHoldButton(btn, keyName) {
+        function press(e) {
+          e.preventDefault();
+          if (levelWon || levelFailed || isDying || isLevelSelectOpen || isPortrait) return;
+          ensureAudio();
+          if (keyName === 'jump' && !keys.jump) jumpPressedEdge = true;
+          keys[keyName] = true;
+          btn.classList.add('pressed');
+        }
+        function release(e) {
+          e.preventDefault();
+          keys[keyName] = false;
+          btn.classList.remove('pressed');
+        }
+        btn.addEventListener('mousedown', press);
+        btn.addEventListener('mouseup', release);
+        btn.addEventListener('mouseleave', release);
+        btn.addEventListener('touchstart', press, { passive: false });
+        btn.addEventListener('touchend', release, { passive: false });
+        btn.addEventListener('touchcancel', release, { passive: false });
+      }
+
+      bindHoldButton(leftBtn, 'left');
+      bindHoldButton(rightBtn, 'right');
+      bindHoldButton(jumpBtn, 'jump');
+
+      levelsBtn.addEventListener('click', function () {
+        ensureAudio();
+        if (isLevelSelectOpen) {
+          closeLevelSelect();
+        } else {
+          openLevelSelect();
+        }
+      });
+
+      winLevelsBtn.addEventListener('click', function () {
+        ensureAudio();
+        openLevelSelect();
+      });
+
+      failLevelsBtn.addEventListener('click', function () {
+        ensureAudio();
+        openLevelSelect();
+      });
+
+      closeLevelsBtn.addEventListener('click', function () {
+        closeLevelSelect();
+      });
+
+      clearSaveBtn.addEventListener('click', function () {
+        unlockedLevel = 0;
+        clearedLevels = {};
+        levelCoinsMap = {};
+        deaths = 0;
+        saveProgress();
+        closeLevelSelect();
+        loadLevel(0);
+      });
+
+      fullscreenBtn.addEventListener('click', function () {
+        try {
+          if (!document.fullscreenElement) {
+            if (document.documentElement.requestFullscreen) {
+              document.documentElement.requestFullscreen().catch(function () {});
+            }
+          } else if (document.exitFullscreen) {
+            document.exitFullscreen().catch(function () {});
+          }
+        } catch (err) {
+          // Ignore if fullscreen is blocked by host
+        }
+      });
+
+      document.addEventListener('fullscreenchange', function () {
+        fullscreenBtn.textContent = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
+        resizeCanvas();
+      });
+
+      muteBtn.addEventListener('click', function () {
+        isMuted = !isMuted;
+        muteBtn.textContent = isMuted ? 'Sound: Off' : 'Sound: On';
+        if (!isMuted) ensureAudio();
+      });
+
+      resetBtn.addEventListener('click', function () {
+        ensureAudio();
+        fullReset();
+      });
+
+      retryLevelBtn.addEventListener('click', function () {
+        ensureAudio();
+        respawnPlayer();
+      });
+
+      nextLevelBtn.addEventListener('click', function () {
+        ensureAudio();
+        loadLevel(currentLevelIndex + 1);
+      });
+
+      playAgainBtn.addEventListener('click', function () {
+        ensureAudio();
+        loadLevel(0);
+      });
+
+      window.addEventListener('resize', resizeCanvas);
+
+      window.onload = function () {
+        loadProgress();
+        loadLevel(unlockedLevel);
+        resizeCanvas();
+        if (animFrameId) window.cancelAnimationFrame(animFrameId);
+        animFrameId = window.requestAnimationFrame(gameLoop);
+      };
+    })();
+  </script>
+</body>
+</html>
