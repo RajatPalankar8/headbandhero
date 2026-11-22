@@ -61,7 +61,7 @@ import com.proto.headbandhero.ui.components.HudBadge
 import com.proto.headbandhero.ui.components.LevelSelectOverlay
 import com.proto.headbandhero.ui.components.OverlayDialog
 import com.proto.headbandhero.ui.components.SmallHudButton
-import com.proto.headbandhero.ui.components.WelcomeBackDialog
+import com.proto.headbandhero.ui.components.WelcomePageOverlay
 import com.proto.headbandhero.ui.components.drawBirds
 import com.proto.headbandhero.ui.components.drawCanvasGrid
 import com.proto.headbandhero.ui.components.drawCoins
@@ -93,9 +93,7 @@ fun PlatformerGameScreen() {
         mutableIntStateOf(prefs.getInt(KEY_DEATHS, 0))
     }
 
-    var showWelcomeBack by remember {
-        mutableStateOf(prefs.getBoolean(KEY_HAS_PLAYED, false) && (unlockedLevel > 0 || clearedSet.isNotEmpty() || deaths > 0))
-    }
+    var showWelcomePage by remember { mutableStateOf(true) }
 
     var currentLevelIndex by remember { mutableIntStateOf(unlockedLevel) }
     var elapsedSeconds by remember { mutableFloatStateOf(0f) }
@@ -288,7 +286,7 @@ fun PlatformerGameScreen() {
                 continue
             }
 
-            if (levelWon || levelFailed || showLevelSelect || showWelcomeBack) continue
+            if (levelWon || levelFailed || showLevelSelect || showWelcomePage) continue
 
             elapsedSeconds += dt
 
@@ -619,7 +617,7 @@ fun PlatformerGameScreen() {
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
-                        if (!showWelcomeBack && !showLevelSelect && !levelFailed && !levelWon) {
+                        if (!showWelcomePage && !showLevelSelect && !levelFailed && !levelWon) {
                             if (!jumpPressed) jumpEdge = true
                             jumpPressed = true
                         }
@@ -657,6 +655,7 @@ fun PlatformerGameScreen() {
                 HudBadge("${"%.1f".format(elapsedSeconds)}s", Color(0xFFF3E5AB))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                SmallHudButton("Home") { showWelcomePage = true }
                 SmallHudButton(if (isMuted) "Sound: Off" else "Sound: On") {
                     isMuted = !isMuted
                     SoundEffectPlayer.isMuted = isMuted
@@ -666,16 +665,16 @@ fun PlatformerGameScreen() {
             }
         }
 
-        // Bottom-Left Movement Buttons (Enlarged to 92.dp x 68.dp for easy comfortable touching)
+        // Bottom-Left Movement Buttons (76.dp x 58.dp)
         Row(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Start))
                 .padding(start = 12.dp, bottom = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            HoldThumbButton("◀", Modifier.size(92.dp, 68.dp), fontSize = 22.sp) { leftPressed = it }
-            HoldThumbButton("▶", Modifier.size(92.dp, 68.dp), fontSize = 22.sp) { rightPressed = it }
+            HoldThumbButton("◀", Modifier.size(76.dp, 58.dp), fontSize = 20.sp) { leftPressed = it }
+            HoldThumbButton("▶", Modifier.size(76.dp, 58.dp), fontSize = 20.sp) { rightPressed = it }
         }
 
         // Bottom-Center AdMob Banner Ad
@@ -686,34 +685,34 @@ fun PlatformerGameScreen() {
                 .padding(bottom = 2.dp)
         )
 
-        // Bottom-Right Visual Jump Button
+        // Bottom-Right Visual Jump Button (88.dp x 58.dp)
         HoldThumbButton(
             label = "JUMP",
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
                 .padding(end = 12.dp, bottom = 10.dp)
-                .size(96.dp, 68.dp),
+                .size(88.dp, 58.dp),
             isAccent = true,
-            fontSize = 16.sp
+            fontSize = 15.sp
         ) { pressed ->
             if (pressed && !jumpPressed) jumpEdge = true
             jumpPressed = pressed
         }
 
-        // Welcome Back / Win / Fail / Level Select Overlays
-        if (showWelcomeBack) {
-            WelcomeBackDialog(
+        // Welcome Page / Win / Fail / Level Select Overlays
+        if (showWelcomePage) {
+            WelcomePageOverlay(
                 unlockedLevel = unlockedLevel,
                 clearedCount = clearedSet.size,
                 totalDeaths = deaths,
-                onContinue = {
-                    showWelcomeBack = false
+                onStartGame = {
+                    showWelcomePage = false
                     saveProgress()
                     goToLevel(unlockedLevel)
                 },
-                onLevelSelect = {
-                    showWelcomeBack = false
+                onSelectLevel = {
+                    showWelcomePage = false
                     saveProgress()
                     showLevelSelect = true
                 }
